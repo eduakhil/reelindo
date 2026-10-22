@@ -1,0 +1,468 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PostType {
+  REEL
+  PHOTO
+}
+
+enum PostStatus {
+  PROCESSING
+  READY
+  FAILED
+  REMOVED
+}
+
+enum Visibility {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+
+enum FollowStatus {
+  ACCEPTED
+  PENDING
+}
+
+enum StoryMediaType {
+  VIDEO
+  PHOTO
+}
+
+enum StoryAudience {
+  FOLLOWERS
+  CLOSE_FRIENDS
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  MENTION
+  MESSAGE
+}
+
+model User {
+  id             String @id @default(uuid()) @db.Uuid
+  username       String @unique @db.VarChar(30)
+  email          String? @unique
+  phone          String? @unique
+  passwordHash   String?
+  displayName    String @db.VarChar(80)
+  bio            String? @db.VarChar(300)
+  avatarUrl      String?
+  website        String?
+  isVerified     Boolean @default(false)
+  isPrivate      Boolean @default(false)
+  language       String @default("en") @db.VarChar(5)
+  role           UserRole @default(USER)
+  isBanned       Boolean @default(false)
+  createdAt      DateTime @default(now())
+  lastActiveAt   DateTime @default(now())
+  posts          Post[]
+  stories        Story[]
+  storyViews     StoryView[]
+  closeFriends   CloseFriend[] @relation("closeFriendOwner")
+  closeFriendOf  CloseFriend[] @relation("closeFriendMember")
+  likes          Like[]
+  comments       Comment[]
+  mentions       Mention[]
+  commentLikes   CommentLike[]
+  saves          Save[]
+  following      Follow[] @relation("follower")
+  followers      Follow[] @relation("following")
+  sessions       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  notifications  Notification[] @relation("notificationOwner")
+  sentNotifications Notification[] @relation("notificationActor")
+  sentMessages   Message[]
+  blocksMade     Block[] @relation("blocker")
+  blocksReceived Block[] @relation("blocked")
+  reports        Report[]
+  viewEvents     ViewEvent[]
+  deviceTokens   DeviceToken[]
+  interests      UserInterest[]
+  memberships    ConversationMember[]
+  notificationPreference NotificationPreference?
+  feedSignals    FeedInterestSignal[]
+  feedFeedback   FeedFeedback[]
+
+  @@index([createdAt])
+  @@index([isBanned, isPrivate])
+}
+
+model RefreshToken {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @db.Uuid
+  tokenHash  String @unique
+  deviceInfo String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model Post {
+  id            String @id @default(uuid()) @db.Uuid
+  userId        String @db.Uuid
+  type          PostType
+  caption       String? @db.VarChar(2200)
+  sourceMediaKey String? @unique
+  videoUrl      String?
+  thumbnailUrl  String?
+  previewUrl    String?
+  duration      Float?
+  trimStart     Float?
+  trimEnd       Float?
+  width         Int?
+  height        Int?
+  soundId       String? @db.Uuid
+  status        PostStatus @default(PROCESSING)
+  visibility    Visibility @default(PUBLIC)
+  allowComments Boolean @default(true)
+  viewsCount    Int @default(0)
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  sharesCount   Int @default(0)
+  savesCount    Int @default(0)
+  createdAt     DateTime @default(now())
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sound         Sound? @relation(fields: [soundId], references: [id], onDelete: SetNull)
+  media         PostMedia[]
+  likes         Like[]
+  comments      Comment[]
+  saves         Save[]
+  hashtags      PostHashtag[]
+  mentions      Mention[]
+  notifications Notification[]
+  viewEvents    ViewEvent[]
+  feedFeedback  FeedFeedback[]
+  originalSound Sound? @relation("originalPost")
+  messages      Message[]
+
+  @@index([status, visibility, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([soundId, createdAt(sort: Desc)])
+}
+
+model PostMedia {
+  id      String @id @default(uuid()) @db.Uuid
+  postId  String @db.Uuid
+  url     String
+  order   Int
+  post    Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@unique([postId, order])
+}
+
+model Story {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  mediaKey  String? @unique
+  mediaUrl  String
+  mediaType StoryMediaType
+  audience  StoryAudience @default(FOLLOWERS)
+  caption   String? @db.VarChar(200)
+  textStyle String @default("BOLD") @db.VarChar(24)
+  filter    String @default("NONE") @db.VarChar(24)
+  overlays  Json @default("[]") @db.JsonB
+  soundId   String? @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sound     Sound? @relation(fields: [soundId], references: [id], onDelete: SetNull)
+  views     StoryView[]
+  @@index([expiresAt, userId])
+  @@index([soundId])
+}
+
+model StoryView {
+  storyId  String @db.Uuid
+  viewerId String @db.Uuid
+  viewedAt DateTime @default(now())
+  story    Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer   User @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  @@id([storyId, viewerId])
+  @@index([viewerId, viewedAt])
+}
+
+model CloseFriend {
+  ownerId   String @db.Uuid
+  friendId  String @db.Uuid
+  createdAt DateTime @default(now())
+  owner     User @relation("closeFriendOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  friend    User @relation("closeFriendMember", fields: [friendId], references: [id], onDelete: Cascade)
+  @@id([ownerId, friendId])
+  @@index([friendId, ownerId])
+}
+
+model Like {
+  userId    String @db.Uuid
+  postId    String @db.Uuid
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+}
+
+model Comment {
+  id        String @id @default(uuid()) @db.Uuid
+  postId    String @db.Uuid
+  userId    String @db.Uuid
+  parentId  String? @db.Uuid
+  text      String @db.VarChar(2000)
+  likesCount Int @default(0)
+  isPinned  Boolean @default(false)
+  createdAt DateTime @default(now())
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("replies")
+  likes     CommentLike[]
+  mentions  Mention[]
+  notifications Notification[]
+  @@index([postId, createdAt(sort: Desc)])
+  @@index([parentId, createdAt])
+}
+
+model CommentLike {
+  userId    String @db.Uuid
+  commentId String @db.Uuid
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@id([userId, commentId])
+}
+
+model Follow {
+  followerId  String @db.Uuid
+  followingId String @db.Uuid
+  status      FollowStatus @default(ACCEPTED)
+  createdAt   DateTime @default(now())
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  @@id([followerId, followingId])
+  @@index([followingId, status, createdAt])
+}
+
+model Save {
+  userId    String @db.Uuid
+  postId    String @db.Uuid
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@id([userId, postId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Hashtag {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String @unique @db.VarChar(100)
+  postsCount Int @default(0)
+  posts     PostHashtag[]
+}
+
+model PostHashtag {
+  postId   String @db.Uuid
+  hashtagId String @db.Uuid
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag  Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  @@id([postId, hashtagId])
+  @@index([hashtagId, postId])
+}
+
+model Mention {
+  id        String @id @default(uuid()) @db.Uuid
+  postId    String? @db.Uuid
+  commentId String? @db.Uuid
+  userId    String @db.Uuid
+  createdAt DateTime @default(now())
+  post      Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Sound {
+  id            String @id @default(uuid()) @db.Uuid
+  title         String @db.VarChar(120)
+  artist        String? @db.VarChar(120)
+  audioUrl      String
+  coverUrl      String?
+  duration      Float?
+  usesCount     Int @default(0)
+  originalPostId String? @unique @db.Uuid
+  originalPost  Post? @relation("originalPost", fields: [originalPostId], references: [id], onDelete: SetNull)
+  posts         Post[]
+  stories       Story[]
+}
+
+model Conversation {
+  id        String @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  conversationId String @db.Uuid
+  userId         String @db.Uuid
+  joinedAt       DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([conversationId, userId])
+  @@index([userId, joinedAt])
+}
+
+model Message {
+  id             String @id @default(uuid()) @db.Uuid
+  conversationId String @db.Uuid
+  senderId       String @db.Uuid
+  text           String? @db.VarChar(4000)
+  mediaUrl       String?
+  sharedPostId   String? @db.Uuid
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sharedPost     Post? @relation(fields: [sharedPostId], references: [id], onDelete: SetNull)
+  @@index([conversationId, createdAt(sort: Desc)])
+}
+
+model Notification {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  actorId   String? @db.Uuid
+  type      NotificationType
+  postId    String? @db.Uuid
+  commentId String? @db.Uuid
+  isRead    Boolean @default(false)
+  createdAt DateTime @default(now())
+  user      User @relation("notificationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User? @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  post      Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+model Block {
+  blockerId String @db.Uuid
+  blockedId String @db.Uuid
+  createdAt DateTime @default(now())
+  blocker   User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id         String @id @default(uuid()) @db.Uuid
+  reporterId String @db.Uuid
+  targetType String @db.VarChar(30)
+  targetId   String @db.VarChar(100)
+  reason     String @db.VarChar(100)
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+  reporter   User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+}
+
+model ViewEvent {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String? @db.Uuid
+  postId       String @db.Uuid
+  watchMs      Int
+  completedPct Float
+  createdAt    DateTime @default(now())
+  user         User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  post         Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model DeviceToken {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @db.Uuid
+  token     String @unique
+  platform  String @db.VarChar(20)
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model NotificationPreference {
+  userId      String @id @db.Uuid
+  pushEnabled Boolean @default(true)
+  updatedAt   DateTime @updatedAt
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model InterestTopic {
+  id    String @id @default(uuid()) @db.Uuid
+  name  String @unique @db.VarChar(80)
+  users UserInterest[]
+}
+
+model UserInterest {
+  userId  String @db.Uuid
+  topicId String @db.Uuid
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic   InterestTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  @@id([userId, topicId])
+}
+
+model FeedInterestSignal {
+  userId    String   @db.Uuid
+  kind      String   @db.VarChar(16)
+  signalKey String   @db.VarChar(200)
+  score     Float
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, kind, signalKey])
+  @@index([userId, score])
+}
+
+model FeedFeedback {
+  userId    String   @db.Uuid
+  postId    String   @db.Uuid
+  action    String   @db.VarChar(32)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([userId, action, createdAt])
+}

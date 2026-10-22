@@ -1,0 +1,18 @@
+{
+  "identities": [
+    {
+      "name": "reelindo-local",
+      "credentials": [
+        {
+          "accessKey": "reelindo-local",
+          "secretKey": "reelindo-local-password"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List"]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read"]
+    }
+  ]
+}

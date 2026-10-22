@@ -1,0 +1,10 @@
+ALTER TABLE "Story"
+  ADD COLUMN "caption" VARCHAR(200),
+  ADD COLUMN "textStyle" VARCHAR(24) NOT NULL DEFAULT 'BOLD',
+  ADD COLUMN "filter" VARCHAR(24) NOT NULL DEFAULT 'NONE',
+  ADD COLUMN "soundId" UUID;
+
+CREATE INDEX "Story_soundId_idx" ON "Story"("soundId");
+
+ALTER TABLE "Story" ADD CONSTRAINT "Story_soundId_fkey"
+  FOREIGN KEY ("soundId") REFERENCES "Sound"("id") ON DELETE SET NULL ON UPDATE CASCADE;

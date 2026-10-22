@@ -1,0 +1,10 @@
+.git
+.pnpm-home
+node_modules
+**/node_modules
+**/dist
+**/coverage
+apps/mobile
+.env
+.env.*
+*.log

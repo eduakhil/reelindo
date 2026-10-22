@@ -1,0 +1,29 @@
+appId: com.reelindo.app
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Skip"
+    optional: true
+- tapOn:
+    id: login-email
+- inputText: ${REELINDO_TEST_EMAIL}
+- tapOn:
+    id: login-password
+- inputText: ${REELINDO_TEST_PASSWORD}
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible:
+      id: feed-like
+    timeout: 30000
+- tapOn:
+    id: feed-like
+- tapOn:
+    id: feed-comments
+- tapOn:
+    id: comment-input
+- inputText: "Maestro Phase 10 check"
+- tapOn:
+    id: comment-submit
+- assertVisible: "Maestro Phase 10 check"

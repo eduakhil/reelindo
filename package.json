@@ -1,0 +1,26 @@
+{
+  "name": "reelindo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.18.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @reelindo/api --filter @reelindo/mobile dev",
+    "dev:api": "pnpm --filter @reelindo/api dev",
+    "dev:mobile": "pnpm --filter @reelindo/mobile dev",
+    "db:generate": "pnpm --filter @reelindo/api db:generate",
+    "db:migrate": "pnpm --filter @reelindo/api db:migrate",
+    "db:migrate:deploy": "pnpm --filter @reelindo/api db:migrate:deploy",
+    "db:seed": "pnpm --filter @reelindo/api db:seed",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prisma": "6.19.3",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  }
+}

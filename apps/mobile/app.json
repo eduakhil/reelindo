@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "Reelindo",
+    "slug": "reelindo",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.reelindo.app"
+    },
+    "android": {
+      "package": "com.reelindo.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F4F8FB"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "scheme": "reelindo",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F4F8FB",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Reelindo uses your camera to record videos and take photos.",
+          "microphonePermission": "Reelindo uses your microphone when recording video."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Reelindo uses your selected photos and videos to create posts.",
+          "cameraPermission": "Reelindo uses your camera to take photos and videos."
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F4F8FB",
+          "dark": {
+            "backgroundColor": "#F4F8FB"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "icon": "./assets/icon.png",
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "8165e126-f3a7-4e45-ac0f-2ac32eef9d71"
+      }
+    }
+  }
+}
